@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenge Calculator - Мониторинг</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .actions {
+            margin-bottom: 30px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn.success {
+            background-color: #28a745;
+        }
+        .btn.success:hover {
+            background-color: #1e7e34;
+        }
+        .status {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .status.running {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.stopped {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .jobs {
+            margin-top: 20px;
+        }
+        .job {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+        }
+        .updates {
+            margin-top: 20px;
+        }
+        .update {
+            background-color: #e9ecef;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+        .loading {
+            display: none;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Revenge Calculator</h1>
+            <h2>Мониторинг сбора данных с криптобирж</h2>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div class="actions">
+            <button class="btn" onclick="triggerCurrentCollection()">📊 Запустить сбор текущих данных</button>
+            <button class="btn" onclick="triggerHistoricalCollection()">📈 Запустить сбор исторических данных</button>
+            <button class="btn success" onclick="refreshData()">🔄 Обновить данные</button>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <!-- Статистика будет загружена динамически -->
+        </div>
+
+        <div class="jobs" id="jobs">
+            <!-- Задачи будут загружены динамически -->
+        </div>
+
+        <div class="updates" id="updates">
+            <!-- Обновления будут загружены динамически -->
+        </div>
+
+        <div class="loading" id="loading">Загрузка...</div>
+    </div>
+
+    <script>
+        async function fetchData(url) {
+            try {
+                const response = await fetch(url);
+                return await response.json();
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                return null;
+            }
+        }
+
+        async function loadStatus() {
+            const status = await fetchData('/data-collection-status');
+            const statusEl = document.getElementById('status');
+            
+            if (status) {
+                statusEl.className = `status ${status.status}`;
+                statusEl.innerHTML = `
+                    <strong>Статус сервиса:</strong> ${status.status === 'running' ? '🟢 Работает' : '🔴 Остановлен'}
+                `;
+
+                const jobsEl = document.getElementById('jobs');
+                if (status.jobs && status.jobs.length > 0) {
+                    jobsEl.innerHTML = '<h3>📅 Запланированные задачи:</h3>' + 
+                        status.jobs.map(job => `
+                            <div class="job">
+                                <strong>${job.name}</strong><br>
+                                Следующий запуск: ${job.next_run ? new Date(job.next_run).toLocaleString('ru-RU') : 'Не запланирован'}
+                            </div>
+                        `).join('');
+                }
+            }
+        }
+
+        async function loadStats() {
+            const stats = await fetchData('/stats');
+            const statsGrid = document.getElementById('statsGrid');
+            
+            if (stats) {
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <h3>📊 Всего свечей</h3>
+                        <div class="value">${stats.total_candles?.toLocaleString('ru-RU') || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>🏪 Бирж</h3>
+                        <div class="value">${stats.total_exchanges || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>💱 Валютных пар</h3>
+                        <div class="value">${stats.total_currency_pairs || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>⏰ Таймфреймов</h3>
+                        <div class="value">${stats.total_time_periods || 0}</div>
+                    </div>
+                `;
+
+                const updatesEl = document.getElementById('updates');
+                if (stats.latest_updates && stats.latest_updates.length > 0) {
+                    updatesEl.innerHTML = '<h3>🕒 Последние обновления:</h3>' + 
+                        stats.latest_updates.map(update => `
+                            <div class="update">
+                                <strong>${update.exchange}</strong>: ${update.last_update ? new Date(update.last_update).toLocaleString('ru-RU') : 'Нет данных'}
+                            </div>
+                        `).join('');
+                }
+            }
+        }
+
+        async function triggerCurrentCollection() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Выполняется...';
+            
+            try {
+                const response = await fetch('/trigger-current-collection', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert('✅ Сбор текущих данных запущен успешно!');
+                } else {
+                    alert('❌ Ошибка: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Ошибка выполнения запроса: ' + error.message);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '📊 Запустить сбор текущих данных';
+        }
+
+        async function triggerHistoricalCollection() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Выполняется...';
+            
+            try {
+                const response = await fetch('/trigger-historical-collection', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert('✅ Сбор исторических данных запущен успешно!');
+                } else {
+                    alert('❌ Ошибка: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Ошибка выполнения запроса: ' + error.message);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '📈 Запустить сбор исторических данных';
+        }
+
+        async function refreshData() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            
+            await Promise.all([
+                loadStatus(),
+                loadStats()
+            ]);
+            
+            loading.style.display = 'none';
+        }
+
+        // Загружаем данные при загрузке страницы
+        document.addEventListener('DOMContentLoaded', refreshData);
+
+        // Автоматически обновляем данные каждые 30 секунд
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html>
