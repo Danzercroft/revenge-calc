@@ -5,8 +5,7 @@ from sqlalchemy.pool import StaticPool
 
 # Database configuration
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://revenge_user:revenge_password@localhost:5432/revenge"
+    "DATABASE_URL"
 )
 
 # Create SQLAlchemy engine

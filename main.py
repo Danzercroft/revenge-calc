@@ -35,7 +35,7 @@ async def check_database():
     try:
         # Test database connection
         with engine.connect() as connection:
-            result = connection.execute(text("SELECT 1"))
+            connection.execute(text("SELECT 1"))
             return {"database": "connected", "status": "healthy"}
     except Exception as e:
         return {"database": "disconnected", "status": "error", "error": str(e)}
