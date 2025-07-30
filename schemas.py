@@ -85,15 +85,18 @@ class TimePeriod(TimePeriodBase):
 
 # Candle schemas
 class CandleBase(BaseModel):
-    symbol: str
+    currency_pair_id: int
     exchange_id: int
     time_period_id: int
+    open_time: datetime
+    close_time: datetime
     open_price: Decimal
     high_price: Decimal
     low_price: Decimal
     close_price: Decimal
     volume: Decimal
-    timestamp: datetime
+    quote_volume: Optional[Decimal] = None
+    trades_count: Optional[int] = None
 
 
 class CandleCreate(CandleBase):

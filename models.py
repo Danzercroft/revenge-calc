@@ -77,19 +77,23 @@ class Candle(Base):
     __tablename__ = "candles"
 
     id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String, nullable=False)
+    currency_pair_id = Column(Integer, ForeignKey("currency_pairs.id"))
     exchange_id = Column(Integer, ForeignKey("exchanges.id"))
     time_period_id = Column(Integer, ForeignKey("time_periods.id"))
+    open_time = Column(DateTime, nullable=False)
+    close_time = Column(DateTime, nullable=False)
     open_price = Column(Numeric(precision=18, scale=8))
     high_price = Column(Numeric(precision=18, scale=8))
     low_price = Column(Numeric(precision=18, scale=8))
     close_price = Column(Numeric(precision=18, scale=8))
     volume = Column(Numeric(precision=18, scale=8))
-    timestamp = Column(DateTime, nullable=False)
+    quote_volume = Column(Numeric(precision=18, scale=8))
+    trades_count = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     # Relationships
+    currency_pair = relationship("CurrencyPair")
     exchange = relationship("Exchange")
     time_period = relationship("TimePeriod")
 

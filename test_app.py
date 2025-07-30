@@ -1,33 +1,26 @@
+"""
+Тестовая версия FastAPI приложения без планировщика для изоляции тестов
+"""
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from contextlib import asynccontextmanager
 import logging
 import os
 
-from database import engine, get_db, get_engine
-from data_collection_service import data_collection_service
-from logging_config import setup_logging, get_log_files_info
+from database import engine, get_db
+from logging_config import setup_logging
 
-# Настройка логирования с сохранением в файлы
-setup_logging(log_dir="logs", log_level=logging.INFO)
+# Настройка логирования с сохранением в файлы для тестов
+setup_logging(log_dir="logs/tests", log_level=logging.DEBUG)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    data_collection_service.start_scheduler()
-    yield
-    # Shutdown
-    data_collection_service.stop_scheduler()
-
+# Создаем приложение БЕЗ lifespan для тестов
 app = FastAPI(
-    title="Revenge Calculator API",
-    description="A FastAPI application for collecting cryptocurrency market data",
-    version="1.0.0",
-    lifespan=lifespan
+    title="Revenge Calculator API (Test)",
+    description="A FastAPI application for collecting cryptocurrency market data (Test Version)",
+    version="1.0.0-test"
 )
 
 # Configure CORS
@@ -62,57 +55,40 @@ async def health_check():
 
 # Database connection test endpoint
 @app.get("/db-status")
-async def check_database(current_engine = Depends(get_engine)):
+async def check_database():
     try:
         # Test database connection
-        with current_engine.connect() as connection:
+        with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
             return {"database": "connected", "status": "healthy"}
     except Exception as e:
         return {"database": "disconnected", "status": "error", "error": str(e)}
 
-
-# Status endpoint for data collection
+# Status endpoint for data collection (мокированный для тестов)
 @app.get("/data-collection-status")
 async def get_data_collection_status():
-    """Получить статус сервиса сбора данных"""
-    try:
-        jobs = []
-        for job in data_collection_service.scheduler.get_jobs():
-            jobs.append({
-                "id": job.id,
-                "name": job.name,
-                "next_run": job.next_run_time.isoformat() if job.next_run_time else None
-            })
-        
-        return {
-            "status": "running" if data_collection_service.scheduler.running else "stopped",
-            "jobs": jobs
-        }
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
+    """Получить статус сервиса сбора данных (тестовая версия)"""
+    return {
+        "status": "mocked",
+        "jobs": [
+            {
+                "id": "collect_current_candles",
+                "name": "Collect Current Candles",
+                "next_run": "2023-01-01T12:00:00"
+            }
+        ]
+    }
 
-
-# Manual trigger endpoints for testing
+# Manual trigger endpoints for testing (мокированные)
 @app.post("/trigger-current-collection")
 async def trigger_current_collection():
-    """Запустить сбор текущих свечей вручную"""
-    try:
-        await data_collection_service.collect_current_candles()
-        return {"status": "success", "message": "Current candles collection triggered"}
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
-
+    """Запустить сбор текущих свечей вручную (тестовая версия)"""
+    return {"status": "success", "message": "Current candles collection triggered (mocked)"}
 
 @app.post("/trigger-historical-collection")
 async def trigger_historical_collection():
-    """Запустить сбор исторических свечей вручную"""
-    try:
-        await data_collection_service.collect_historical_candles()
-        return {"status": "success", "message": "Historical candles collection triggered"}
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
-
+    """Запустить сбор исторических свечей вручную (тестовая версия)"""
+    return {"status": "success", "message": "Historical candles collection triggered (mocked)"}
 
 # Statistics endpoint
 @app.get("/stats")
@@ -141,29 +117,10 @@ async def get_statistics(db: Session = Depends(get_db)):
             "latest_updates": [
                 {
                     "exchange": row[0], 
-                    "last_update": row[1] if isinstance(row[1], str) else (row[1].isoformat() if row[1] else None)
+                    "last_update": row[1].isoformat() if row[1] and hasattr(row[1], 'isoformat') else str(row[1]) if row[1] else None
                 }
                 for row in latest_updates
             ]
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
-
-@app.get("/logs/info")
-async def get_logs_info():
-    """Получить информацию о файлах логов"""
-    try:
-        logs_info = get_log_files_info()
-        return {
-            "status": "success",
-            "logs": logs_info,
-            "total_files": len(logs_info)
-        }
-    except Exception as e:
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error getting logs info: {e}")
-        return {"status": "error", "error": str(e)}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

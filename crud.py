@@ -95,6 +95,7 @@ def get_candle(db: Session, candle_id: int):
 def get_candles(
     db: Session, 
     symbol: Optional[str] = None,
+    currency_pair_id: Optional[int] = None,
     exchange_id: Optional[int] = None,
     time_period_id: Optional[int] = None,
     skip: int = 0, 
@@ -103,13 +104,27 @@ def get_candles(
     query = db.query(models.Candle)
     
     if symbol:
-        query = query.filter(models.Candle.symbol == symbol)
+        # Конвертируем символ в currency_pair_id
+        if '/' in symbol:
+            base_symbol, quote_symbol = symbol.split('/')
+            base_sym = db.query(models.Symbol).filter(models.Symbol.symbol == base_symbol).first()
+            quote_sym = db.query(models.Symbol).filter(models.Symbol.symbol == quote_symbol).first()
+            if base_sym and quote_sym:
+                currency_pair = db.query(models.CurrencyPair).filter(
+                    models.CurrencyPair.base_symbol_id == base_sym.id,
+                    models.CurrencyPair.quote_symbol_id == quote_sym.id
+                ).first()
+                if currency_pair:
+                    query = query.filter(models.Candle.currency_pair_id == currency_pair.id)
+    
+    if currency_pair_id:
+        query = query.filter(models.Candle.currency_pair_id == currency_pair_id)
     if exchange_id:
         query = query.filter(models.Candle.exchange_id == exchange_id)
     if time_period_id:
         query = query.filter(models.Candle.time_period_id == time_period_id)
     
-    return query.order_by(desc(models.Candle.timestamp)).offset(skip).limit(limit).all()
+    return query.order_by(desc(models.Candle.open_time)).offset(skip).limit(limit).all()
 
 
 def create_candle(db: Session, candle: schemas.CandleCreate):

@@ -100,6 +100,30 @@
             margin-bottom: 5px;
             border-radius: 4px;
         }
+        .logs {
+            margin-top: 20px;
+        }
+        .logs h3 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .log-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #17a2b8;
+        }
+        .log-item .log-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .log-item .log-details {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
         .loading {
             display: none;
             color: #6c757d;
@@ -131,6 +155,10 @@
 
         <div class="updates" id="updates">
             <!-- Обновления будут загружены динамически -->
+        </div>
+
+        <div class="logs" id="logs">
+            <!-- Информация о логах будет загружена динамически -->
         </div>
 
         <div class="loading" id="loading">Загрузка...</div>
@@ -206,6 +234,32 @@
             }
         }
 
+        async function loadLogs() {
+            const logs = await fetchData('/logs/info');
+            const logsDiv = document.getElementById('logs');
+            
+            if (logs && logs.status === 'success') {
+                const logFiles = Object.entries(logs.logs);
+                logsDiv.innerHTML = `
+                    <h3>📄 Файлы логов (${logs.total_files})</h3>
+                    ${logFiles.map(([fileName, fileInfo]) => `
+                        <div class="log-item">
+                            <div class="log-name">${fileName}</div>
+                            <div class="log-details">
+                                ${fileInfo.exists ? `
+                                    Размер: ${fileInfo.size_mb} MB | 
+                                    Изменён: ${new Date(fileInfo.modified).toLocaleString('ru-RU')} |
+                                    Путь: ${fileInfo.path}
+                                ` : `Ошибка: ${fileInfo.error}`}
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            } else {
+                logsDiv.innerHTML = '<h3>📄 Файлы логов</h3><div class="log-item">Нет данных о логах</div>';
+            }
+        }
+
         async function triggerCurrentCollection() {
             const btn = event.target;
             btn.disabled = true;
@@ -260,7 +314,8 @@
             
             await Promise.all([
                 loadStatus(),
-                loadStats()
+                loadStats(),
+                loadLogs()
             ]);
             
             loading.style.display = 'none';
