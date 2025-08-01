@@ -1,13 +1,14 @@
 """
 Общие фикстуры для всех тестов проекта revenge-calc
 """
-import pytest
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from unittest.mock import Mock, AsyncMock
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from unittest.mock import Mock, AsyncMock
 
 import models
 from database import Base
@@ -99,21 +100,21 @@ def sample_symbols():
         description="Bitcoin cryptocurrency",
         is_active=True
     )
-    
+
     usdt = models.Symbol(
         name="Tether",
         symbol="USDT",
         description="Tether stablecoin",
         is_active=True
     )
-    
+
     eth = models.Symbol(
         name="Ethereum",
         symbol="ETH",
         description="Ethereum cryptocurrency",
         is_active=True
     )
-    
+
     return {"BTC": btc, "USDT": usdt, "ETH": eth}
 
 
@@ -122,7 +123,7 @@ def sample_currency_pair(sample_symbols):
     """Создает образец валютной пары для тестов"""
     btc = sample_symbols["BTC"]
     usdt = sample_symbols["USDT"]
-    
+
     pair = models.CurrencyPair(
         base_symbol_id=btc.id,
         quote_symbol_id=usdt.id,
@@ -164,7 +165,7 @@ def sample_candles_batch():
     """Создает пакет образцов данных свечей для тестов"""
     base_time = datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc)
     candles = []
-    
+
     for i in range(10):
         candle = {
             'timestamp': base_time.replace(minute=i),
@@ -175,7 +176,7 @@ def sample_candles_batch():
             'volume': 100.0 + i * 5
         }
         candles.append(candle)
-    
+
     return candles
 
 
@@ -190,25 +191,26 @@ def mock_ccxt_exchange():
 
 
 @pytest.fixture
-def populated_test_db(test_db_session, sample_exchange, sample_symbols, sample_currency_pair, sample_time_periods):
+def populated_test_db(test_db_session, sample_exchange, sample_symbols,
+                      sample_currency_pair, sample_time_periods):
     """Заполняет тестовую БД полным набором тестовых данных"""
     # Добавляем базовые объекты
     test_db_session.add(sample_exchange)
     test_db_session.add_all(sample_symbols.values())
     test_db_session.commit()
-    
+
     # Устанавливаем правильные ID для валютной пары после commit
     sample_currency_pair.base_symbol_id = sample_symbols["BTC"].id
     sample_currency_pair.quote_symbol_id = sample_symbols["USDT"].id
-    
+
     test_db_session.add(sample_currency_pair)
     test_db_session.add_all(sample_time_periods)
     test_db_session.commit()
-    
+
     # Создаем свечи для каждого периода времени
     candles = []
     base_time = datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc)
-    
+
     for period in sample_time_periods:
         for i in range(5):  # 5 свечей на каждый период
             timestamp = base_time.replace(minute=i * period.minutes)
@@ -227,10 +229,10 @@ def populated_test_db(test_db_session, sample_exchange, sample_symbols, sample_c
                 trades_count=0
             )
             candles.append(candle)
-    
+
     test_db_session.add_all(candles)
     test_db_session.commit()
-    
+
     return test_db_session
 
 
@@ -271,13 +273,13 @@ def mock_data_collection_service():
     mock_service.collect_historical_candles = AsyncMock()
     mock_service.scheduler = Mock()
     mock_service.scheduler.running = True
-    
+
     # Создаем мок job для тестов
     mock_job = Mock()
     mock_job.id = "collect_current_candles"
     mock_job.name = "Collect Current Candles"
     mock_job.next_run_time = None
-    
+
     mock_service.scheduler.get_jobs = Mock(return_value=[mock_job])
     mock_service.start_scheduler = Mock()
     mock_service.stop_scheduler = Mock()
@@ -305,14 +307,12 @@ def datetime_now():
 @pytest.fixture
 def datetime_yesterday():
     """Возвращает вчерашнее время в UTC"""
-    from datetime import timedelta
     return datetime.now(timezone.utc) - timedelta(days=1)
 
 
 @pytest.fixture
 def datetime_week_ago():
     """Возвращает время неделю назад в UTC"""
-    from datetime import timedelta
     return datetime.now(timezone.utc) - timedelta(weeks=1)
 
 
@@ -334,7 +334,7 @@ def pytest_collection_modifyitems(config, items):
         # Маркируем асинхронные тесты
         if asyncio.iscoroutinefunction(item.function):
             item.add_marker(pytest.mark.asyncio)
-        
+
         # Маркируем тесты по файлам
         if "test_main" in item.nodeid:
             item.add_marker(pytest.mark.api)
@@ -344,7 +344,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.unit)
         elif "test_exchange" in item.nodeid:
             item.add_marker(pytest.mark.unit)
-        
+
         # Маркируем медленные тесты
         if "performance" in item.name.lower() or "large" in item.name.lower():
             item.add_marker(pytest.mark.slow)

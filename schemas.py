@@ -1,90 +1,127 @@
-from pydantic import BaseModel, EmailStr
+"""
+Pydantic схемы для валидации и сериализации данных API.
+
+Этот модуль содержит схемы для всех моделей данных,
+используемые для валидации входящих запросов и сериализации ответов API.
+"""
 from datetime import datetime
-from typing import Optional
 from decimal import Decimal
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr
 
 
 # User schemas
 class UserBase(BaseModel):
+    """Базовая схема пользователя."""
+
     name: str
     email: EmailStr
 
 
 class UserCreate(UserBase):
+    """Схема для создания пользователя."""
+
     password: str
 
 
 class User(UserBase):
+    """Схема пользователя для ответов API."""
+
     id: int
     email_verified_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
+        """Конфигурация Pydantic модели."""
+
         from_attributes = True
 
 
 # Exchange schemas
 class ExchangeBase(BaseModel):
+    """Базовая схема биржи."""
+
     name: str
 
 
 class ExchangeCreate(ExchangeBase):
+    """Схема для создания биржи."""
+
     api_key: Optional[str] = None
     api_secret: Optional[str] = None
 
 
 class Exchange(ExchangeBase):
+    """Схема биржи для ответов API."""
+
     id: int
     api_key: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
+        """Конфигурация Pydantic модели."""
+
         from_attributes = True
 
 
 # Currency Pair schemas
 class CurrencyPairBase(BaseModel):
+    """Базовая схема валютной пары."""
+
     symbol: str
     base_currency: str
     quote_currency: str
 
 
 class CurrencyPairCreate(CurrencyPairBase):
-    pass
+    """Схема для создания валютной пары."""
 
 
 class CurrencyPair(CurrencyPairBase):
+    """Схема валютной пары для ответов API."""
+
     id: int
     created_at: datetime
     updated_at: datetime
 
     class Config:
+        """Конфигурация Pydantic модели."""
+
         from_attributes = True
 
 
 # Time Period schemas
 class TimePeriodBase(BaseModel):
+    """Базовая схема временного периода."""
+
     name: str
     interval: str
 
 
 class TimePeriodCreate(TimePeriodBase):
-    pass
+    """Схема для создания временного периода."""
 
 
 class TimePeriod(TimePeriodBase):
+    """Схема временного периода для ответов API."""
+
     id: int
     created_at: datetime
     updated_at: datetime
 
     class Config:
+        """Конфигурация Pydantic модели."""
+
         from_attributes = True
 
 
 # Candle schemas
 class CandleBase(BaseModel):
+    """Базовая схема свечи."""
+
     currency_pair_id: int
     exchange_id: int
     time_period_id: int
@@ -100,20 +137,26 @@ class CandleBase(BaseModel):
 
 
 class CandleCreate(CandleBase):
-    pass
+    """Схема для создания свечи."""
 
 
 class Candle(CandleBase):
+    """Схема свечи для ответов API."""
+
     id: int
     created_at: datetime
     updated_at: datetime
 
     class Config:
+        """Конфигурация Pydantic модели."""
+
         from_attributes = True
 
 
 # Exchange Configuration schemas
 class ExchangeConfigurationBase(BaseModel):
+    """Базовая схема конфигурации биржи."""
+
     exchange_id: int
     user_id: int
     api_key: Optional[str] = None
@@ -122,13 +165,17 @@ class ExchangeConfigurationBase(BaseModel):
 
 
 class ExchangeConfigurationCreate(ExchangeConfigurationBase):
-    pass
+    """Схема для создания конфигурации биржи."""
 
 
 class ExchangeConfiguration(ExchangeConfigurationBase):
+    """Схема конфигурации биржи для ответов API."""
+
     id: int
     created_at: datetime
     updated_at: datetime
 
     class Config:
+        """Конфигурация Pydantic модели."""
+
         from_attributes = True

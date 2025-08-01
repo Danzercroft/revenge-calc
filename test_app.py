@@ -1,14 +1,15 @@
 """
 Тестовая версия FastAPI приложения без планировщика для изоляции тестов
 """
-from fastapi import FastAPI, Depends, HTTPException
+import logging
+import os
+
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-import logging
-import os
 
 from database import engine, get_db
 from logging_config import setup_logging
@@ -39,6 +40,7 @@ if os.path.exists("static"):
 # Root endpoint - serve monitoring dashboard
 @app.get("/")
 async def read_root():
+    """Корневой эндпоинт - возвращает главную страницу или статус."""
     if os.path.exists("static/index.html"):
         return FileResponse("static/index.html")
     return {"message": "Welcome to FastAPI!", "status": "running"}
@@ -46,16 +48,19 @@ async def read_root():
 # API Root endpoint
 @app.get("/api")
 async def api_root():
+    """API корневой эндпоинт."""
     return {"message": "Revenge Calculator API", "status": "running"}
 
 # Health check endpoint
 @app.get("/health")
 async def health_check():
+    """Проверка состояния приложения."""
     return {"status": "healthy"}
 
 # Database connection test endpoint
 @app.get("/db-status")
 async def check_database():
+    """Проверка подключения к базе данных."""
     try:
         # Test database connection
         with engine.connect() as connection:
@@ -99,7 +104,7 @@ async def get_statistics(db: Session = Depends(get_db)):
         total_exchanges = db.execute(text("SELECT COUNT(*) FROM exchanges")).scalar()
         total_pairs = db.execute(text("SELECT COUNT(*) FROM currency_pairs")).scalar()
         total_periods = db.execute(text("SELECT COUNT(*) FROM time_periods")).scalar()
-        
+
         # Последние обновления по биржам
         latest_updates = db.execute(text("""
             SELECT e.name as exchange_name, MAX(c.created_at) as last_update
@@ -108,7 +113,7 @@ async def get_statistics(db: Session = Depends(get_db)):
             GROUP BY e.id, e.name
             ORDER BY last_update DESC
         """)).fetchall()
-        
+
         return {
             "total_candles": total_candles,
             "total_exchanges": total_exchanges,
@@ -116,8 +121,11 @@ async def get_statistics(db: Session = Depends(get_db)):
             "total_time_periods": total_periods,
             "latest_updates": [
                 {
-                    "exchange": row[0], 
-                    "last_update": row[1].isoformat() if row[1] and hasattr(row[1], 'isoformat') else str(row[1]) if row[1] else None
+                    "exchange": row[0],
+                    "last_update": (
+                        row[1].isoformat() if row[1] and hasattr(row[1], 'isoformat') 
+                        else str(row[1]) if row[1] else None
+                    )
                 }
                 for row in latest_updates
             ]

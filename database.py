@@ -1,8 +1,14 @@
+"""
+Конфигурация базы данных и сессий SQLAlchemy.
+
+Этот модуль настраивает подключение к базе данных, создает движок SQLAlchemy
+и предоставляет зависимости для получения сессий базы данных.
+"""
 import os
+
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.pool import StaticPool
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,8 +32,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Create Base class
 Base = declarative_base()
 
+
 # Dependency to get DB session
 def get_db():
+    """Зависимость для получения сессии базы данных."""
     db = SessionLocal()
     try:
         yield db
@@ -37,4 +45,5 @@ def get_db():
 
 # Dependency to get engine
 def get_engine():
+    """Зависимость для получения движка базы данных."""
     return engine
