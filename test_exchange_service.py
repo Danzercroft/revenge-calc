@@ -11,11 +11,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 import pytest
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-import pytest
 
 import models
 from database import Base
